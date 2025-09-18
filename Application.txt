@@ -1,0 +1,14 @@
+# Steps for the Application
+
+- Create a Postgres Database in the System and add configuration for it in the ENV.
+Example:
+
+LIBRARY_DB_HOST=localhost;
+LIBRARY_DB_PORT=5432;
+LIBRARY_DB_NAME=postgres;
+LIBRARY_DB_USERNAME=postgres;
+LIBRARY_DB_PASSWORD=navneet;
+
+- Execute All Database Queries mentioned in (schema.sql file) in the project.
+
+-
