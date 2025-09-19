@@ -1,6 +1,8 @@
 package com.project.library.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,9 +26,12 @@ public class User {
     @Column(name = "id", nullable = false)
     private UUID id;
 
+    @NotBlank(message = "Name is Required")
     @Column(name = "name", nullable = false)
     private String name;
 
+    @NotBlank(message = "Email is Required")
+    @Email(message = "Invalid Email Format, example: abc@gmail.com")
     @Column(name = "email", nullable = false)
     private String email;
 
