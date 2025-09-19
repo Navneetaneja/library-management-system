@@ -1,15 +1,14 @@
 package com.project.library.controller;
 
-import com.project.library.entity.Book;
+import com.project.library.enums.AvailabilityStatus;
+import com.project.library.models.BookDetails;
 import com.project.library.models.WrapperResponse;
 import com.project.library.service.BookService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("book")
@@ -22,9 +21,39 @@ public class BookController {
 
     @PostMapping("create")
     public ResponseEntity<WrapperResponse<String>> createBook(
-            @Valid @RequestBody Book book) {
-        String created = bookService.createBook(book);
+            @Valid @RequestBody BookDetails bookDetails) {
+        String created = bookService.createBook(bookDetails);
         WrapperResponse<String> response = new WrapperResponse<>(true, created);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping("list")
+    public ResponseEntity<WrapperResponse<Page<BookDetails>>> getAllBooks(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "5") int size,
+            @RequestParam(name = "author", required = false) String author,
+            @RequestParam(name = "publishedYear", required = false) Integer publishedYear) {
+        Page<BookDetails> allBooks = bookService.getAllBooks(page,
+                                                             size,
+                                                             author,
+                                                             publishedYear);
+        WrapperResponse<Page<BookDetails>> response = new WrapperResponse<>(
+                true, allBooks);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("update")
+    public ResponseEntity<WrapperResponse<String>> updateBook(
+            @RequestBody BookDetails bookDetails) {
+        String modified = bookService.updateBook(bookDetails);
+        WrapperResponse<String> response = new WrapperResponse<>(true, modified);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("update-status/{isbn}")
+    public ResponseEntity<WrapperResponse<String>> updateBookStatus(
+            @PathVariable("isbn") String isbn,
+            @RequestParam(name = "status") AvailabilityStatus status) {
+        bookService.updateStatus(isbn, status);
     }
 }

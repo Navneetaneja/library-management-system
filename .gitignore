@@ -1,4 +1,4 @@
-Application.txt
+Project-Information.txt
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

@@ -19,6 +19,7 @@ public class UserService {
     }
 
     public String createUser(User user) {
+        user.setId(UUID.randomUUID());
         String email = user.getEmail().trim().toLowerCase();
         String name = user.getName().trim();
         if (userRepository.existsByEmail(email)) {
