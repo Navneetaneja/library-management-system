@@ -4,6 +4,7 @@ import com.project.library.entity.Book;
 import com.project.library.enums.AvailabilityStatus;
 import com.project.library.models.BookDetails;
 import com.project.library.repository.BookRepository;
+import com.project.library.repository.WishlistRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,18 +13,25 @@ import org.springframework.stereotype.Service;
 
 import java.time.Year;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
 public class BookService {
     private static final String BOOK_CREATED = "Book Created Successfully";
     private static final String BOOK_MODIFIED = "Book Modified Successfully";
+    private static final String BOOK_STATUS_UPDATED = "Book Status Updated Successfully";
+    private static final String BOOK_DELETED = "Book Deleted Successfully";
     private static final int MIN_YEAR = 1900;
+    private static final int WISHLIST_USERS_SIZE = 10;
 
     private final BookRepository bookRepository;
+    private final WishlistRepository wishlistRepository;
 
-    public BookService(BookRepository bookRepository) {
+    public BookService(BookRepository bookRepository,
+                       WishlistRepository wishlistRepository) {
         this.bookRepository = bookRepository;
+        this.wishlistRepository = wishlistRepository;
     }
 
     public String createBook(BookDetails bookDetails) {
@@ -47,7 +55,24 @@ public class BookService {
                 .build();
         bookRepository.save(book);
         log.info("Book is created with id : {}", bookId);
+        if (null != existingBook &&
+                AvailabilityStatus.AVAILABLE == bookDetails.getAvailabilityStatus()) {
+            CompletableFuture.runAsync(() -> sendNotificationToWishlistedUsers(
+                    existingBook));
+        }
         return BOOK_CREATED;
+    }
+
+    protected UUID getBookIdByIsbn(String isbn) {
+        String bookIsbn = isbn.trim();
+        if (bookIsbn.isEmpty()) {
+            throw new RuntimeException("Book ISBN is Empty");
+        }
+        Book book = bookRepository.findByIsbn(bookIsbn.toLowerCase());
+        if (null == book || book.isDeleted()) {
+            return null;
+        }
+        return book.getId();
     }
 
     private void validatePublishedYear(int year) {
@@ -63,6 +88,12 @@ public class BookService {
         Pageable pageable = PageRequest.of(page, size);
         String authorFilter = null == author ? null : author.trim().toLowerCase();
         return bookRepository.getAllBooks(authorFilter, publishedYear, pageable);
+    }
+
+    public Page<BookDetails> searchBooks(int page, int size, String searchKeyword) {
+        Pageable pageable = PageRequest.of(page, size);
+        String search = String.format("%%%s%%", searchKeyword.trim().toLowerCase());
+        return bookRepository.searchBooks(search, pageable);
     }
 
     public String updateBook(BookDetails bookDetails) {
@@ -90,19 +121,24 @@ public class BookService {
         if (null != author && !author.isEmpty()) {
             existingBook.setAuthor(author);
         }
+        boolean sendWishlistNotification = false;
         if (null != bookDetails.getAvailabilityStatus()) {
-            existingBook.setAvailabilityStatus(bookDetails.getAvailabilityStatus());
             if (AvailabilityStatus.BORROWED == existingBook.getAvailabilityStatus() &&
                     AvailabilityStatus.AVAILABLE == bookDetails.getAvailabilityStatus()) {
-//                CompletableFuture.runAsync(() -> )
+                sendWishlistNotification = true;
             }
+            existingBook.setAvailabilityStatus(bookDetails.getAvailabilityStatus());
         }
         bookRepository.save(existingBook);
         log.info("Book with id : {} is modified", existingBook.getId());
+        if (sendWishlistNotification) {
+            CompletableFuture.runAsync(() -> sendNotificationToWishlistedUsers(
+                    existingBook));
+        }
         return BOOK_MODIFIED;
     }
 
-    public void updateStatus(String isbn, AvailabilityStatus status) {
+    public String updateStatus(String isbn, AvailabilityStatus status) {
         String isbnValue = isbn.trim().toLowerCase();
         Book existingBook = bookRepository.findByIsbn(isbnValue);
         if (null == existingBook || existingBook.isDeleted()) {
@@ -115,9 +151,36 @@ public class BookService {
         bookRepository.save(existingBook);
         log.info("Book with id : {} is updated with status : {}",
                  existingBook.getId(), status);
-//        if(AvailabilityStatus.AVAILABLE == status) {
-//            CompletableFuture.runAsync(() -> )
-//        }
+        if (AvailabilityStatus.AVAILABLE == status) {
+            CompletableFuture.runAsync(() -> sendNotificationToWishlistedUsers(
+                    existingBook));
+        }
+        return BOOK_STATUS_UPDATED;
+    }
+
+    private void sendNotificationToWishlistedUsers(Book book) {
+        int page = 0;
+        Page<UUID> users;
+        do {
+            Pageable pageable = PageRequest.of(page, WISHLIST_USERS_SIZE);
+            users = wishlistRepository.getWishlistedUsersForBook(book.getId(), pageable);
+            users.forEach(userId -> log.info(
+                    "Notification prepared for user_id : {} Book [{}] is now available",
+                    userId, book.getTitle()));
+            page++;
+        } while (users.hasNext());
+    }
+
+    public String deleteBook(String isbn) {
+        String bookIsbn = isbn.trim().toLowerCase();
+        Book existingBook = bookRepository.findByIsbn(bookIsbn);
+        if (null == existingBook || existingBook.isDeleted()) {
+            throw new RuntimeException("Book not found with this ISBN");
+        }
+        existingBook.setDeleted(true);
+        bookRepository.save(existingBook);
+        log.info("Book with id : {} is deleted", existingBook.getId());
+        return BOOK_DELETED;
     }
 
 }

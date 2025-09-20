@@ -31,4 +31,13 @@ public class UserService {
         log.info("user created with id : {}", userId);
         return USER_CREATED;
     }
+
+    protected UUID getUserIdByEmail(String email) {
+        String userEmail = email.trim();
+        if (userEmail.isEmpty()) {
+            throw new RuntimeException("User Email is Empty");
+        }
+        return userRepository.findByEmail(userEmail.toLowerCase())
+                .map(User::getId).orElse(null);
+    }
 }

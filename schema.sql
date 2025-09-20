@@ -21,3 +21,12 @@ CREATE TABLE public.book
     CONSTRAINT book_isbn_key UNIQUE (isbn),
     CONSTRAINT book_pkey PRIMARY KEY (id)
 );
+
+CREATE TABLE public.wishlist
+(
+    user_id uuid NOT NULL,
+    book_id uuid NOT NULL,
+    CONSTRAINT wishlist_pkey PRIMARY KEY (user_id, book_id),
+    CONSTRAINT wishlist_user_f_key foreign key (user_id) references public.users(id),
+    CONSTRAINT wishlist_book_f_key foreign key (book_id) references public.book(id)
+);

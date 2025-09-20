@@ -20,4 +20,10 @@ public interface BookRepository extends JpaRepository<Book, UUID> {
             "or b.publishedYear = :publishedYear) order by b.title, b.createdAt ")
     Page<BookDetails> getAllBooks(String author, Integer publishedYear,
                                   Pageable pageable);
+
+    @Query("select new com.project.library.models.BookDetails(b.isbn, b.title, b.author, " +
+            "b.publishedYear, b.availabilityStatus) from Book b where " +
+            "(lower(b.title) like :searchKeyword or lower(b.author) like :searchKeyword) " +
+            "order by b.title, b.createdAt ")
+    Page<BookDetails> searchBooks(String searchKeyword, Pageable pageable);
 }
