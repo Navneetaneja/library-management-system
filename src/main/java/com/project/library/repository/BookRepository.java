@@ -17,13 +17,14 @@ public interface BookRepository extends JpaRepository<Book, UUID> {
     @Query("select new com.project.library.models.BookDetails(b.isbn, b.title, b.author, " +
             "b.publishedYear, b.availabilityStatus) from Book b where (:author is null " +
             "or :author = '' or lower(b.author) = :author) and (:publishedYear is null " +
-            "or b.publishedYear = :publishedYear) order by b.title, b.createdAt ")
+            "or b.publishedYear = :publishedYear) and b.deleted = false " +
+            "order by b.title, b.createdAt ")
     Page<BookDetails> getAllBooks(String author, Integer publishedYear,
                                   Pageable pageable);
 
     @Query("select new com.project.library.models.BookDetails(b.isbn, b.title, b.author, " +
             "b.publishedYear, b.availabilityStatus) from Book b where " +
             "(lower(b.title) like :searchKeyword or lower(b.author) like :searchKeyword) " +
-            "order by b.title, b.createdAt ")
+            "and b.deleted = false order by b.title, b.createdAt ")
     Page<BookDetails> searchBooks(String searchKeyword, Pageable pageable);
 }
