@@ -1,14 +1,175 @@
-# Steps for the Application
+************************ Library Management System ************************
 
-- Create a Postgres Database in the System and add configuration for it in the ENV.
+# Description - Build a backend API for managing a library’s book inventory. The system
+should handle standard book management and also process notifications for users when a
+wishlisted book is returned.
+
+** Requirements **
+
+# CRUD Operations for Books:
+- Create: Add a new book with fields like title, author, isbn, publishedYear, and availabilityStatus.
+- Read: Retrieve a paginated list of books with optional filters (e.g., by author, publishedYear).
+- Update: Edit book details. A key use case is updating availabilityStatus when a book is borrowed or returned.
+- Delete: Remove a book from the inventory.
+
+# Search: Implement an endpoint to search for books by title or author using partial matching.
+
+# Validation: Ensure no duplicate isbn and that publishedYear is a valid year.
+
+# Asynchronous Wishlist Notification: When a book's status is updated from
+"Borrowed" to "Available" the API must trigger a background task. This task will find
+all users who have wishlisted that specific book and log a notification message for
+each (e.g., "Notification prepared for user_id: Book [Title] is now available").
+The API call that updates the book's status must return a response quickly,
+without waiting for this notification logic to complete.
+
+** Evaluation Criteria **
+- Clean API design (RESTful principles, proper status codes).
+- Efficient database queries and schema design.
+- Error handling and input validation.
+- Knowledge of pagination and search optimization.
+- Audit Trail: Implement soft deletes for books.
+- Asynchronous Processing: A clear and logical implementation of the decoupled
+notification task.
+
+
+********************************* Application Information **************************************
+
+** Requirements **
+
+# Project requires Java 17, Install that JDK
+
+# Create a Postgres Database in the System and add configuration for it in the ENV
 Example:
-
 LIBRARY_DB_HOST=localhost;
 LIBRARY_DB_PORT=5432;
 LIBRARY_DB_NAME=postgres;
 LIBRARY_DB_USERNAME=postgres;
 LIBRARY_DB_PASSWORD=navneet;
 
-- Execute All Database Queries mentioned in (schema.sql file) in the project.
+# Execute All Database Queries mentioned in (schema.sql file) in the project
 
--
+# Run the application and execute all below-mentioned API's
+
+********************** API's **********************
+
+** As Server will Start on PORT - 8081 as mentioned in application.yml file,
+All Endpoints will have the same base url as (http://localhost:8081) **
+
+BASE_URL = http://localhost:8081
+
+# First We need Users -
+- If Any Book is Borrowed, we can record the user who has taken that book.
+- Users can save any book to their wishlist.
+
+** CREATE USER API **
+
+API: {{BASE_URL}}/user/create
+Method: POST
+Body:
+{
+    "name": "Navneet",
+    "email": "navneet@gmail.com"
+}
+
+- Both Name and Email are Required.
+- Email should be in proper format, example - abc@gmail.com.
+- Email should be Unique.
+- Only Create User is Supported right now as per Project Requirement.
+
+** CREATE BOOK API **
+
+API: {{BASE_URL}}/book/create
+Method: POST
+Body:
+{
+    "isbn": "123-456",
+    "title": "The Library System",
+    "author": "Library",
+    "publishedYear": 2007
+}
+
+- All are required (isbn, title, author, publishedYear).
+- ISBN should be Unique.
+- Published Year should be valid number and between 1900 & Current Year.
+- Book can be re-added with the same isbn only after deletion.
+- By Default, Books will be created with AVAILABLE status.
+
+** GET ALL BOOKS API **
+
+API: {{BASE_URL}}/book/list
+Method: GET
+Params: page, size, author (optional), publishedYear (optional)
+Example: http://localhost:8081/book/list?page=0&size=3&author=library&publishedYear=2007
+
+- Supports Pagination using page and size, size (optional as default value is 5).
+- Supports Optional exact match Filters using author and publishedYear.
+
+** SEARCH BOOKS API **
+
+API: {{BASE_URL}}/book/search
+Method: GET
+Params: page, size, search
+Example: http://localhost:8081/book/search?page=0&size=3&search=library
+
+- Supports Pagination using page and size, size (optional as default value is 5).
+- Search Books by partial matching on author or title using (search) parameter.
+
+** UPDATE BOOK DETAILS API **
+
+API: {{BASE_URL}}/book/update
+Method: PUT
+Body:
+{
+    "isbn": "123-456",
+    "title": "Library Code",
+    "author": "Random",
+    "publishedYear": 2020
+}
+
+- Book Details can be updated partially by parameters (title, author, publishedYear).
+- If All fields are present, whole Details will get modified for Book.
+- Book (isbn) is required to Update Book Details and should be present in the System.
+
+** UPDATE BOOK STATUS API **
+
+API: {{BASE_URL}}/book/update-status/{isbn}
+Method: PUT
+Path-Params: isbn (Book isbn required in URL)
+Query-Params: status (BORROWED / AVAILABLE), user-email (navneet@gmail.com)
+Example: http://localhost:8081/book/update-status/123-456?status=BORROWED&user-email=navneet@gmail.com
+
+- If Status is BORROWED, user-email parameter is Required.
+- User should be created first with the provided email using Create User API to borrow Book.
+- Book (isbn) is required and should be present in the System.
+
+* This should be Done after creating a Wishlist using Create Wishlist API *
+- On Marking AVAILABLE, Notification log should be printed for all wishlisted users.
+
+** DELETE BOOK API **
+
+API: {{BASE_URL}}/book/delete/{isbn}
+Method: DELETE
+Path-Params: isbn (Book isbn required in URL)
+
+- Book (isbn) is required and should be present in the System.
+- Book should get Soft Deleted by marking deleted boolean param to true.
+
+
+** CREATE WISHLIST API **
+
+API: {{BASE_URL}}/wishlist/create
+Method: POST
+Params: email, isbn
+Example: http://localhost:8081/wishlist/create?email=navneet@gmail.com&isbn=123-456
+
+- Both User Email and Book isbn are required and should be present in the system.
+
+** DELETE WISHLIST API **
+
+API: {{BASE_URL}}/wishlist/delete
+Method: DELETE
+Params: email, isbn
+Example: http://localhost:8081/wishlist/delete?email=navneet@gmail.com&isbn=123-456
+
+- Both User Email and Book isbn are required and should be present in the system.

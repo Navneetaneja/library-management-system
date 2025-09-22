@@ -26,11 +26,14 @@ public class BookService {
     private static final int WISHLIST_USERS_SIZE = 10;
 
     private final BookRepository bookRepository;
+    private final UserService userService;
     private final WishlistRepository wishlistRepository;
 
     public BookService(BookRepository bookRepository,
+                       UserService userService,
                        WishlistRepository wishlistRepository) {
         this.bookRepository = bookRepository;
+        this.userService = userService;
         this.wishlistRepository = wishlistRepository;
     }
 
@@ -51,12 +54,13 @@ public class BookService {
                 .title(title)
                 .author(author)
                 .publishedYear(year)
-                .availabilityStatus(bookDetails.getAvailabilityStatus())
+                .availabilityStatus(AvailabilityStatus.AVAILABLE)
                 .build();
         bookRepository.save(book);
         log.info("Book is created with id : {}", bookId);
-        if (null != existingBook &&
-                AvailabilityStatus.AVAILABLE == bookDetails.getAvailabilityStatus()) {
+        if (null != existingBook) {
+            // The Book is already present in deleted state, so adding it again
+            // will send notification to all existing wishlist users
             CompletableFuture.runAsync(() -> sendNotificationToWishlistedUsers(
                     existingBook));
         }
@@ -121,24 +125,12 @@ public class BookService {
         if (null != author && !author.isEmpty()) {
             existingBook.setAuthor(author);
         }
-        boolean sendWishlistNotification = false;
-        if (null != bookDetails.getAvailabilityStatus()) {
-            if (AvailabilityStatus.BORROWED == existingBook.getAvailabilityStatus() &&
-                    AvailabilityStatus.AVAILABLE == bookDetails.getAvailabilityStatus()) {
-                sendWishlistNotification = true;
-            }
-            existingBook.setAvailabilityStatus(bookDetails.getAvailabilityStatus());
-        }
         bookRepository.save(existingBook);
         log.info("Book with id : {} is modified", existingBook.getId());
-        if (sendWishlistNotification) {
-            CompletableFuture.runAsync(() -> sendNotificationToWishlistedUsers(
-                    existingBook));
-        }
         return BOOK_MODIFIED;
     }
 
-    public String updateStatus(String isbn, AvailabilityStatus status) {
+    public String updateStatus(String isbn, AvailabilityStatus status, String userEmail) {
         String isbnValue = isbn.trim().toLowerCase();
         Book existingBook = bookRepository.findByIsbn(isbnValue);
         if (null == existingBook || existingBook.isDeleted()) {
@@ -146,6 +138,18 @@ public class BookService {
         }
         if (status == existingBook.getAvailabilityStatus()) {
             throw new RuntimeException("Book already have same availability status");
+        }
+        if (AvailabilityStatus.BORROWED == status) {
+            if (null == userEmail) {
+                throw new RuntimeException("User Email is Required to Borrow Book");
+            }
+            UUID userId = userService.getUserIdByEmail(userEmail);
+            if (null == userId) {
+                throw new RuntimeException("User not found to Borrow Book");
+            }
+            existingBook.setBorrowedByUser(userId);
+        } else {
+            existingBook.setBorrowedByUser(null);
         }
         existingBook.setAvailabilityStatus(status);
         bookRepository.save(existingBook);

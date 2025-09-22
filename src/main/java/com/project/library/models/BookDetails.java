@@ -1,5 +1,6 @@
 package com.project.library.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.project.library.enums.AvailabilityStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,6 +24,6 @@ public class BookDetails {
     @NotNull(message = "Published Year is Required")
     private Integer publishedYear;
 
-    @NotNull(message = "Availability Status should be either AVAILABLE or BORROWED")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private AvailabilityStatus availabilityStatus;
 }

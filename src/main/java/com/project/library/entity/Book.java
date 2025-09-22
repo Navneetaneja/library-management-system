@@ -38,6 +38,9 @@ public class Book {
     @Column(name = "availability_status")
     private AvailabilityStatus availabilityStatus;
 
+    @Column(name = "borrowed_by_user")
+    private UUID borrowedByUser;
+
     @Column(name = "deleted")
     private boolean deleted;
 

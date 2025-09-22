@@ -64,8 +64,9 @@ public class BookController {
     @PutMapping("update-status/{isbn}")
     public ResponseEntity<WrapperResponse<String>> updateBookStatus(
             @PathVariable("isbn") String isbn,
-            @RequestParam(name = "status") AvailabilityStatus status) {
-        String statusUpdated = bookService.updateStatus(isbn, status);
+            @RequestParam(name = "status") AvailabilityStatus status,
+            @RequestParam(name = "user-email", required = false) String userEmail) {
+        String statusUpdated = bookService.updateStatus(isbn, status, userEmail);
         WrapperResponse<String> response = new WrapperResponse<>(
                 true, statusUpdated);
         return new ResponseEntity<>(response, HttpStatus.OK);
