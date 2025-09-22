@@ -37,7 +37,7 @@ notification task.
 
 ** Requirements **
 
-# Project requires Java 17, Install that JDK
+# Project requires Java 17, Install that SDK
 
 # Create a Postgres Database in the System and add configuration for it in the ENV
 Example:

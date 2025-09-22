@@ -23,6 +23,8 @@ CREATE TABLE public.book
     CONSTRAINT book_pkey PRIMARY KEY (id),
     CONSTRAINT book_borrowed_user_f_key FOREIGN KEY (borrowed_by_user) REFERENCES public.users(id)
 );
+CREATE INDEX author_idx ON public.book USING btree (lower((author)::text));
+CREATE INDEX title_idx ON public.book USING btree (lower((title)::text));
 
 CREATE TABLE public.wishlist
 (
@@ -32,3 +34,4 @@ CREATE TABLE public.wishlist
     CONSTRAINT wishlist_user_f_key FOREIGN KEY (user_id) references public.users (id),
     CONSTRAINT wishlist_book_f_key FOREIGN KEY (book_id) references public.book (id)
 );
+CREATE INDEX wishlist_book_idx ON public.wishlist USING btree (book_id);
